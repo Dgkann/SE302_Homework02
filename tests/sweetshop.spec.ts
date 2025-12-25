@@ -8,7 +8,7 @@ test.describe('Sweet Shop Functional Tests', () => {
     test('TC_01: Should login successfully with valid credentials', async ({ page }) => { // 
         const loginPage = new LoginPage(page);
         await loginPage.navigate();
-        await loginPage.login('dogukanyurtturkk@gmail.com','Dogu1234');
+        await loginPage.login('test@example.com','password123');
         
         // URL Assertion 
         await expect(page).toHaveURL('https://sweetshop.netlify.app/');
@@ -94,5 +94,4 @@ test.describe('Sweet Shop Functional Tests', () => {
         const badge = page.locator('.badge-success');
         await expect(badge).toHaveText('2');
     });
-    
 });
