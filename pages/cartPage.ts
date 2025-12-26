@@ -2,33 +2,26 @@ import { Page, Locator } from '@playwright/test';
 
 export class CartPage {
     readonly page: Page;
-    readonly sweetsMenu: Locator;
-    readonly addToBasketBtn: Locator;
-    readonly basketIcon: Locator;
-    readonly checkoutBtn: Locator;
-    readonly firstNameInput: Locator;
-    readonly continueCheckoutBtn: Locator;
+    readonly cartBadge: Locator;
+    readonly addItemButtons: Locator;
+    readonly emptyBasketLink: Locator;
+    readonly checkoutButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
-        this.sweetsMenu = page.locator('a[href="/sweets"]');
-        this.addToBasketBtn = page.locator('.card-footer .btn').first();
-        this.basketIcon = page.locator('a[href="/basket"]');
-        this.checkoutBtn = page.locator('a[href="/checkout"]');
-        this.firstNameInput = page.locator('#firstName');
-        this.continueCheckoutBtn = page.locator('.btn-primary.btn-lg');
+        this.cartBadge = page.locator('.navbar-nav .badge-success');
+        this.addItemButtons = page.locator('a.addItem');
+        this.emptyBasketLink = page.getByRole('link', { name: 'Empty Basket' });
+        this.checkoutButton = page.getByRole('button', { name: 'Continue to checkout' });
     }
 
-    async navigateToSweets() {
-        await this.sweetsMenu.click();
+    async addItemToBasket(index: number = 0) {
+        const targetButton = this.addItemButtons.nth(index);
+        // Butonun görünür ve tıklanabilir olduğundan emin oluyoruz.
+        await targetButton.waitFor({ state: 'visible' });
+        await targetButton.click();
     }
-
-    async addItemToBasket() {
-        await this.addToBasketBtn.click();
-    }
-
-    async goToCheckout() {
-        await this.basketIcon.click();
-        await this.checkoutBtn.click();
+    async emptyBasket() {
+        await this.emptyBasketLink.click();
     }
 }
