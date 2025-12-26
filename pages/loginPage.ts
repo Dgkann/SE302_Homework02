@@ -5,15 +5,12 @@ export class LoginPage {
     readonly emailInput: Locator;
     readonly passwordInput: Locator;
     readonly loginButton: Locator;
-    readonly errorMessage: Locator;
 
     constructor(page: Page) {
         this.page = page;
-        // Sitedeki gerçek ID'ler kullanıldı
-        this.emailInput = page.locator('#exampleInputEmail1');
-        this.passwordInput = page.locator('#exampleInputPassword1');
+        this.emailInput = page.locator('#exampleInputEmail'); 
+        this.passwordInput = page.locator('#exampleInputPassword');
         this.loginButton = page.locator('button[type="submit"]');
-        this.errorMessage = page.locator('.invalid-feedback');
     }
 
     async navigate() {
