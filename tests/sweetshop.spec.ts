@@ -5,93 +5,89 @@ import { CartPage } from '../pages/cartPage';
 test.describe('Sweet Shop Functional Tests', () => { 
 
     // TC_01: Positive Login Test
-    test('TC_01: Should login successfully with valid credentials', async ({ page }) => { // 
+    test('TC_01: Should login successfully with valid credentials', async ({ page }) => {
         const loginPage = new LoginPage(page);
         await loginPage.navigate();
-        await loginPage.login('test@example.com','password123');
-        
-        // URL Assertion 
-        await expect(page).toHaveURL('https://sweetshop.netlify.app/');
+        await loginPage.login('test@user.com', 'qwerty');
+        await expect(page).toHaveURL(/.*00efc23d/); 
     });
 
-    // TC_02: Negative Login Test 
+    // TC_02: Negative Login Test (Invalid Email)
     test('TC_02: Should show error for invalid email format', async ({ page }) => {
         const loginPage = new LoginPage(page);
         await loginPage.navigate();
-        await loginPage.login('dogukanyurtturk', '12345');
-        
-        // Locator Assertion 
-        const isVisible = await page.locator('.invalid-feedback').isVisible();
-        expect(isVisible).toBeTruthy();
+        await loginPage.login('invalid-email', '12345');
+        await expect(page.locator('.invalid-email')).toBeVisible();
     });
 
-    // TC_03: Product Navigation Test 
-    test('TC_03: Should navigate to Sweets page', async ({ page }) => {
+    // TC_03: Navigation Test
+    test('TC_03: Should navigate to Sweets page via home button', async ({ page }) => {
         await page.goto('https://sweetshop.netlify.app/');
-        await page.click('a[href="/sweets"]');
+        await page.locator('a.sweets').click(); 
         await expect(page).toHaveURL(/.*sweets/);
+        await expect(page.locator('h1')).toContainText('Browse sweets');
     });
-
-    // TC_04: Add to Basket Test 
-    test('TC_04: Should add item to basket', async ({ page }) => {
+    
+    // TC_04: Basic Add to Cart Test
+    test('TC_04: Should add item to basket and update badge', async ({ page }) => {
+        const cartPage = new CartPage(page);
         await page.goto('https://sweetshop.netlify.app/sweets');
-        await page.locator('.card-footer .btn').first().click();
-        const cartCount = page.locator('.badge-success');
-        await expect(cartCount).toHaveText('1');
+        await cartPage.addItemToBasket(0);
+        await expect(cartPage.cartBadge).toHaveText('1');
     });
 
-    // TC_05: Empty Checkout Validation 
+    // TC_05: Checkout Form Validation (Handles duplicate ID #name bug)
     test('TC_05: Should validate mandatory fields on checkout', async ({ page }) => {
-        await page.goto('https://sweetshop.netlify.app/basket');
-        await page.click('a[href="/checkout"]');
-        await page.click('.btn-primary'); // Submit without filling
-        
-        const firstNameError = page.locator('text=Valid first name is required');
-        await expect(firstNameError).toBeVisible();
-    });
-    // TC_06: Remove Item from Basket
-    test('TC_06: Should remove an item from the basket successfully', async ({ page }) => {
-        const cart = new CartPage(page);
-        
-        // Setup: Add an item first
+        const cartPage = new CartPage(page);
         await page.goto('https://sweetshop.netlify.app/sweets');
-        await cart.addItemToBasket();
-        
-        // Action: Go to basket and delete
+        await cartPage.addItemToBasket(0);
         await page.goto('https://sweetshop.netlify.app/basket');
-        await page.click('text=Delete'); // Standard delete button interaction
         
-        // Assertion: Check if the basket is empty or total is 0
-        const total = page.locator('h4:has-text("Total")');
-        await expect(total).toContainText('£0.00');
+        await page.getByRole('button', { name: 'Continue to checkout' }).click();
+        
+        await expect(page.locator('text=Valid first name is required.')).toBeVisible();
+        await expect(page.locator('text=Credit card number is required')).toBeVisible();
     });
 
-    // TC_07: Basket Badge Persistence
-    test('TC_07: Should maintain basket count after navigating away', async ({ page }) => {
-        const cart = new CartPage(page);
-        
+    // TC_06: Empty Basket (Handles JS Confirm Dialog)
+    test('TC_06: Should empty the basket successfully', async ({ page }) => {
+        const cartPage = new CartPage(page);
         await page.goto('https://sweetshop.netlify.app/sweets');
-        await cart.addItemToBasket();
+        await cartPage.addItemToBasket(0);
+
+        await page.goto('https://sweetshop.netlify.app/basket');
         
-        // Navigate to About page
-        await page.click('a[href="/about"]');
+        // Handle the "Are you sure?" browser dialog
+        page.once('dialog', dialog => dialog.accept());
         
-        // Assertion: Cart count should still be 1 [cite: 52]
-        const badge = page.locator('.badge-success');
-        await expect(badge).toHaveText('1');
+        await cartPage.emptyBasketLink.click();
+        await expect(cartPage.cartBadge).toHaveText('0');
     });
 
-    // TC_08: Multiple Items in Basket
+    // TC_07: Badge Persistence (Bypasses 'bout' link typo bug)
+    test('TC_07: Should maintain basket count after navigation', async ({ page }) => {
+        const cartPage = new CartPage(page);
+        await page.goto('https://sweetshop.netlify.app/sweets');
+        await cartPage.addItemToBasket(0);
+        
+        await expect(cartPage.cartBadge).toHaveText('1');
+
+        // Navigate via Navbar to avoid the broken 'bout' link on the page
+        await page.locator('.navbar-nav').getByRole('link', { name: 'About' }).click();
+        
+        await page.waitForLoadState('networkidle');
+        await expect(cartPage.cartBadge).toHaveText('1');
+    });
+
+    // TC_08: Multiple Items Counter Test
     test('TC_08: Should correctly count multiple different items', async ({ page }) => {
-        const cart = new CartPage(page);
+        const cartPage = new CartPage(page);
         await page.goto('https://sweetshop.netlify.app/sweets');
         
-        // Add the first and second item
-        await page.locator('.card-footer .btn').nth(0).click();
-        await page.locator('.card-footer .btn').nth(1).click();
+        await cartPage.addItemToBasket(0);
+        await expect(cartPage.cartBadge).toHaveText('1');
         
-        // Assertion: Badge should show 2
-        const badge = page.locator('.badge-success');
-        await expect(badge).toHaveText('2');
+        await cartPage.addItemToBasket(1);
+        await expect(cartPage.cartBadge).toHaveText('2');
     });
 });
